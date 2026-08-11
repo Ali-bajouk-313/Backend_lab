@@ -16,7 +16,6 @@ public class SuppliersController : ControllerBase
         _supplierService = supplierService;
     }
 
-    // GET /api/suppliers
     [HttpGet]
     public IActionResult GetAll()
     {
@@ -26,7 +25,6 @@ public class SuppliersController : ControllerBase
         return Ok(suppliers);
     }
 
-    // GET /api/suppliers/{id}
     [HttpGet("{id:guid}")]
     public IActionResult GetById(
         [FromRoute] Guid id)
@@ -45,7 +43,6 @@ public class SuppliersController : ControllerBase
         return Ok(supplier);
     }
 
-    // POST /api/suppliers
     [HttpPost]
     public IActionResult Create(
         [FromBody] CreateSupplierRequest request)
@@ -67,7 +64,6 @@ public class SuppliersController : ControllerBase
             result.Supplier);
     }
 
-    // DELETE /api/suppliers/{id}
     [HttpDelete("{id:guid}")]
     public IActionResult Deactivate(
         [FromRoute] Guid id)

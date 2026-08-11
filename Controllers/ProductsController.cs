@@ -71,7 +71,6 @@ public class ProductsController : ControllerBase
         return Ok(products);
     }
 
-    // POST /api/products
     [HttpPost]
     public IActionResult Create(
         [FromBody] CreateProductRequest request)
@@ -92,7 +91,6 @@ public class ProductsController : ControllerBase
             result.Product);
     }
 
-    // POST /api/products/{id}/quantity
     [HttpPost("{id:guid}/quantity")]
     public IActionResult UpdateQuantity(
         [FromRoute] Guid id,
@@ -121,7 +119,6 @@ public class ProductsController : ControllerBase
         return Ok(result.Product);
     }
 
-    // POST /api/products/{id}/price
     [HttpPost("{id:guid}/price")]
     public IActionResult UpdatePrice(
         [FromRoute] Guid id,
@@ -150,7 +147,6 @@ public class ProductsController : ControllerBase
         return Ok(result.Product);
     }
 
-    // POST /api/products/{id}/image
     [HttpPost("{id:guid}/image")]
     public async Task<IActionResult> UploadImage(
         [FromRoute] Guid id,
@@ -232,7 +228,6 @@ public class ProductsController : ControllerBase
         return Ok(image);
     }
 
-    // DELETE /api/products/{id}
     [HttpDelete("{id:guid}")]
     public IActionResult Delete(
         [FromRoute] Guid id)
@@ -282,7 +277,6 @@ public class ProductsController : ControllerBase
         });
     }
 
-    // POST /api/products/{id}/assign-supplier/{supplierId}
     [HttpPost("{id:guid}/assign-supplier/{supplierId:guid}")]
     public IActionResult AssignSupplier(
         [FromRoute] Guid id,
