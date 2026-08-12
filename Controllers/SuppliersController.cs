@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using WarehouseManagement.Api.Contracts;
-using WarehouseManagement.Api.Models;
-using WarehouseManagement.Api.Services;
+using Microsoft.EntityFrameworkCore;
+using WarehouseManagement.Api.DatabaseFirst;
 
 namespace WarehouseManagement.Api.Controllers;
 
@@ -9,28 +8,29 @@ namespace WarehouseManagement.Api.Controllers;
 [Route("api/suppliers")]
 public class SuppliersController : ControllerBase
 {
-    private readonly ISupplierService _supplierService;
+    private readonly WarehouseDbFirstContext _context;
 
-    public SuppliersController(ISupplierService supplierService)
+    public SuppliersController(WarehouseDbFirstContext context)
     {
-        _supplierService = supplierService;
+        _context = context;
     }
 
     [HttpGet]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        List<Supplier> suppliers =
-            _supplierService.GetAll();
+        var suppliers = await _context.Suppliers
+            .Include(s => s.Products)
+            .ToListAsync();
 
         return Ok(suppliers);
     }
 
-    [HttpGet("{id:guid}")]
-    public IActionResult GetById(
-        [FromRoute] Guid id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
     {
-        Supplier? supplier =
-            _supplierService.GetById(id);
+        var supplier = await _context.Suppliers
+            .Include(s => s.Products)
+            .FirstOrDefaultAsync(s => s.Id == id);
 
         if (supplier == null)
         {
@@ -41,48 +41,5 @@ public class SuppliersController : ControllerBase
         }
 
         return Ok(supplier);
-    }
-
-    [HttpPost]
-    public IActionResult Create(
-        [FromBody] CreateSupplierRequest request)
-    {
-        var result =
-            _supplierService.Create(request);
-
-        if (!result.Success)
-        {
-            return BadRequest(new
-            {
-                message = result.Error
-            });
-        }
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = result.Supplier!.Id },
-            result.Supplier);
-    }
-
-    [HttpDelete("{id:guid}")]
-    public IActionResult Deactivate(
-        [FromRoute] Guid id)
-    {
-        var result =
-            _supplierService.Deactivate(id);
-
-        if (!result.Success)
-        {
-            return NotFound(new
-            {
-                message = result.Error
-            });
-        }
-
-        return Ok(new
-        {
-            message = "Supplier deactivated successfully.",
-            supplier = result.Supplier
-        });
     }
 }

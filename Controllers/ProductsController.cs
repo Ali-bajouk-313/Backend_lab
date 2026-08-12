@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Globalization;
-using WarehouseManagement.Api.Contracts;
-using WarehouseManagement.Api.Models;
-using WarehouseManagement.Api.Services;
+using Microsoft.EntityFrameworkCore;
+using WarehouseManagement.Api.DatabaseFirst;
 
 namespace WarehouseManagement.Api.Controllers;
 
@@ -10,306 +8,200 @@ namespace WarehouseManagement.Api.Controllers;
 [Route("api/products")]
 public class ProductsController : ControllerBase
 {
-    private readonly IProductService _productService;
-    private readonly ISupplierService _supplierService;
-    private readonly IWebHostEnvironment _environment;
+private readonly WarehouseDbFirstContext _context;
 
-    public ProductsController(
-        IProductService productService,
-        ISupplierService supplierService,
-        IWebHostEnvironment environment)
+
+public ProductsController(WarehouseDbFirstContext context)
+{
+    _context = context;
+}
+
+[HttpGet]
+public async Task<IActionResult> GetAll()
+{
+    var products = await _context.Products
+        .Include(p => p.Supplier)
+        .Include(p => p.ProductImages)
+        .ToListAsync();
+
+    return Ok(products);
+}
+
+[HttpGet("{id:int}")]
+public async Task<IActionResult> GetById(int id)
+{
+    var product = await _context.Products
+        .Include(p => p.Supplier)
+        .Include(p => p.ProductImages)
+        .FirstOrDefaultAsync(p => p.Id == id);
+
+    if (product == null)
     {
-        _productService = productService;
-        _supplierService = supplierService;
-        _environment = environment;
-    }
-
-    [HttpGet]
-    public IActionResult GetAll(
-        [FromQuery] bool onlyAvailable = false)
-    {
-        List<Product> products =
-            _productService.GetAll(onlyAvailable);
-
-        return Ok(products);
-    }
-
-    [HttpGet("{id:guid}")]
-    public IActionResult GetById(
-        [FromRoute] Guid id)
-    {
-        Product? product = _productService.GetById(id);
-
-        if (product == null)
+        return NotFound(new
         {
-            return NotFound(new
-            {
-                message = "Product not found."
-            });
-        }
-
-        return Ok(product);
-    }
-
-    [HttpGet("search")]
-    public IActionResult Search(
-        [FromQuery] string? name,
-        [FromQuery] string? supplier)
-    {
-        if (string.IsNullOrWhiteSpace(name) &&
-            string.IsNullOrWhiteSpace(supplier))
-        {
-            return BadRequest(new
-            {
-                message = "At least one search parameter is required."
-            });
-        }
-
-        List<Product> products =
-            _productService.Search(name, supplier);
-
-        return Ok(products);
-    }
-
-    [HttpPost]
-    public IActionResult Create(
-        [FromBody] CreateProductRequest request)
-    {
-        var result = _productService.Create(request);
-
-        if (!result.Success)
-        {
-            return BadRequest(new
-            {
-                message = result.Error
-            });
-        }
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = result.Product!.Id },
-            result.Product);
-    }
-
-    [HttpPost("{id:guid}/quantity")]
-    public IActionResult UpdateQuantity(
-        [FromRoute] Guid id,
-        [FromBody] UpdateProductQuantityRequest request)
-    {
-        var result = _productService.UpdateQuantity(
-            id,
-            request.QuantityInStock);
-
-        if (!result.Success)
-        {
-            if (result.Error == "Product not found.")
-            {
-                return NotFound(new
-                {
-                    message = result.Error
-                });
-            }
-
-            return BadRequest(new
-            {
-                message = result.Error
-            });
-        }
-
-        return Ok(result.Product);
-    }
-
-    [HttpPost("{id:guid}/price")]
-    public IActionResult UpdatePrice(
-        [FromRoute] Guid id,
-        [FromBody] UpdateProductPriceRequest request)
-    {
-        var result = _productService.UpdatePrice(
-            id,
-            request.Price);
-
-        if (!result.Success)
-        {
-            if (result.Error == "Product not found.")
-            {
-                return NotFound(new
-                {
-                    message = result.Error
-                });
-            }
-
-            return BadRequest(new
-            {
-                message = result.Error
-            });
-        }
-
-        return Ok(result.Product);
-    }
-
-    [HttpPost("{id:guid}/image")]
-    public async Task<IActionResult> UploadImage(
-        [FromRoute] Guid id,
-        [FromForm] IFormFile file)
-    {
-        Product? product = _productService.GetById(id);
-
-        if (product == null)
-        {
-            return NotFound(new
-            {
-                message = "Product not found."
-            });
-        }
-
-        if (file == null || file.Length == 0)
-        {
-            return BadRequest(new
-            {
-                message = "Image file is required."
-            });
-        }
-
-        if (file.Length > 2 * 1024 * 1024)
-        {
-            return BadRequest(new
-            {
-                message = "Maximum file size is 2 MB."
-            });
-        }
-
-        string extension =
-            Path.GetExtension(file.FileName).ToLowerInvariant();
-
-        string[] allowedExtensions =
-        {
-            ".jpg",
-            ".jpeg",
-            ".png"
-        };
-
-        if (!allowedExtensions.Contains(extension))
-        {
-            return BadRequest(new
-            {
-                message = "Only JPG and PNG images are allowed."
-            });
-        }
-
-        string uploadsFolder = Path.Combine(
-            _environment.WebRootPath,
-            "uploads");
-
-        Directory.CreateDirectory(uploadsFolder);
-
-        string fileName =
-            $"{Guid.NewGuid()}{extension}";
-
-        string filePath =
-            Path.Combine(uploadsFolder, fileName);
-
-        using FileStream stream =
-            new FileStream(
-                filePath,
-                FileMode.Create);
-
-        await file.CopyToAsync(stream);
-
-        ProductImage image = new ProductImage
-        {
-            ProductId = id,
-            FileName = file.FileName,
-            FilePath = $"/uploads/{fileName}"
-        };
-
-        product.Images.Add(image);
-        product.LastUpdatedAt = DateTime.UtcNow;
-
-        return Ok(image);
-    }
-
-    [HttpDelete("{id:guid}")]
-    public IActionResult Delete(
-        [FromRoute] Guid id)
-    {
-        var result = _productService.Archive(id);
-
-        if (!result.Success)
-        {
-            return NotFound(new
-            {
-                message = result.Error
-            });
-        }
-
-        return Ok(new
-        {
-            message = "Product archived successfully.",
-            product = result.Product
+            message = "Product not found."
         });
     }
 
-    // GET /api/products/server-time
-    [HttpGet("server-time")]
-    public IActionResult GetServerTime(
-        [FromHeader(Name = "Accept-Language")]
-        string? language)
+    return Ok(product);
+}
+
+[HttpGet("by-supplier")]
+public async Task<IActionResult> GetProductsBySupplier(
+    [FromQuery] string supplierName,
+    [FromQuery] string sort = "asc")
+{
+    if (string.IsNullOrWhiteSpace(supplierName))
     {
-        string cultureName = language?.ToLowerInvariant() switch
+        return BadRequest(new
         {
-            "fr-fr" => "fr-FR",
-            "ar-lb" => "ar-LB",
-            _ => "en-US"
-        };
-
-        CultureInfo culture =
-            CultureInfo.GetCultureInfo(cultureName);
-
-        string formattedDate =
-            DateTime.Now.ToString(
-                "F",
-                culture);
-
-        return Ok(new
-        {
-            language = cultureName,
-            serverTime = formattedDate
+            message = "Supplier name is required."
         });
     }
 
-    [HttpPost("{id:guid}/assign-supplier/{supplierId:guid}")]
-    public IActionResult AssignSupplier(
-        [FromRoute] Guid id,
-        [FromRoute] Guid supplierId)
+    if (sort.ToLower() != "asc" &&
+        sort.ToLower() != "desc")
     {
-        var result = _productService.AssignSupplier(
-            id,
-            supplierId);
-
-        if (!result.Success)
+        return BadRequest(new
         {
-            if (result.Error == "Product not found.")
-            {
-                return NotFound(new
-                {
-                    message = result.Error
-                });
-            }
-
-            if (result.Error == "Supplier not found.")
-            {
-                return NotFound(new
-                {
-                    message = result.Error
-                });
-            }
-
-            return BadRequest(new
-            {
-                message = result.Error
-            });
-        }
-
-        return Ok(result.Product);
+            message = "Sort must be either 'asc' or 'desc'."
+        });
     }
+
+    var query = _context.Products
+        .Include(p => p.Supplier)
+        .Where(p => p.Supplier != null && p.Supplier.Name == supplierName);
+
+    if (sort.ToLower() == "desc")
+    {
+        query = query.OrderByDescending(p => p.CreatedAt);
+    }
+    else
+    {
+        query = query.OrderBy(p => p.CreatedAt);
+    }
+
+    var products = await query.ToListAsync();
+
+    return Ok(products);
+}
+
+[HttpGet("group-by-expiry-year")]
+public async Task<IActionResult> GroupByExpiryYear()
+{
+    var result = await _context.Products
+        .Where(p => p.ExpiryDate.HasValue)
+        .GroupBy(p => p.ExpiryDate!.Value.Year)
+        .Select(group => new
+        {
+            ExpiryYear = group.Key,
+            ProductCount = group.Count(),
+            Products = group.ToList()
+        })
+        .OrderBy(x => x.ExpiryYear)
+        .ToListAsync();
+
+    return Ok(result);
+}
+
+[HttpGet("group-by-expiry-year-country")]
+public async Task<IActionResult> GroupByExpiryYearAndSupplierCountry()
+{
+    var result = await _context.Products
+        .Include(p => p.Supplier)
+        .Where(p => p.ExpiryDate.HasValue && p.Supplier != null)
+        .GroupBy(p => new
+        {
+            ExpiryYear = p.ExpiryDate!.Value.Year,
+            Country = p.Supplier!.Country
+        })
+        .Select(group => new
+        {
+            ExpiryYear = group.Key.ExpiryYear,
+            Country = group.Key.Country,
+            ProductCount = group.Count(),
+            Products = group.ToList()
+        })
+        .OrderBy(x => x.ExpiryYear)
+        .ThenBy(x => x.Country)
+        .ToListAsync();
+
+    return Ok(result);
+}
+
+[HttpGet("count")]
+public async Task<IActionResult> GetProductCount()
+{
+    var count = await _context.Products.CountAsync();
+
+    return Ok(new
+    {
+        totalProducts = count
+    });
+}
+
+
+
+[HttpGet("pagination")]
+public async Task<IActionResult> GetProductsPaginated(
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 10)
+{
+    if (pageNumber < 1)
+    {
+        return BadRequest(new
+        {
+            message = "pageNumber must be greater than 0."
+        });
+    }
+
+    if (pageSize < 1)
+    {
+        return BadRequest(new
+        {
+            message = "pageSize must be greater than 0."
+        });
+    }
+
+    var totalProducts = await _context.Products.CountAsync();
+
+    var totalPages = (int)Math.Ceiling(
+        (double)totalProducts / pageSize
+    );
+
+    var products = await _context.Products
+        .Include(p => p.Supplier)
+        .OrderBy(p => p.Id)
+        .Skip((pageNumber - 1) * pageSize)
+        .Take(pageSize)
+        .ToListAsync();
+
+    return Ok(new
+    {
+        pageNumber,
+        pageSize,
+        totalProducts,
+        totalPages,
+        products
+    });
+}
+
+[HttpGet("debug-db")]
+public async Task<IActionResult> DebugDatabase()
+{
+    var database = await _context.Database
+        .SqlQueryRaw<string>("SELECT current_database() AS \"Value\"")
+        .FirstAsync();
+
+    var schema = await _context.Database
+        .SqlQueryRaw<string>("SELECT current_schema() AS \"Value\"")
+        .FirstAsync();
+
+    return Ok(new
+    {
+        database,
+        schema
+    });
+}
+
 }

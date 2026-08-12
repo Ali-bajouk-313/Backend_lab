@@ -7,11 +7,11 @@ public interface ISupplierService
 {
     List<Supplier> GetAll();
 
-    Supplier? GetById(Guid id);
+    Supplier? GetById(int id);
 
     (bool Success, string? Error, Supplier? Supplier) Create(
         CreateSupplierRequest request);
 
     (bool Success, string? Error, Supplier? Supplier) Deactivate(
-        Guid id);
+        int id);
 }
