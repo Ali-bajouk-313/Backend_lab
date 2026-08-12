@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using WarehouseManagement.Api.Contracts;
-using WarehouseManagement.Api.Models;
 using WarehouseManagement.Api.Services;
 
 namespace WarehouseManagement.Api.Controllers;
@@ -11,28 +10,26 @@ public class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _supplierService;
 
-    public SuppliersController(ISupplierService supplierService)
+    public SuppliersController(
+        ISupplierService supplierService)
     {
         _supplierService = supplierService;
     }
 
-    // GET /api/suppliers
     [HttpGet]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        List<Supplier> suppliers =
-            _supplierService.GetAll();
+        var suppliers =
+            await _supplierService.GetAllAsync();
 
         return Ok(suppliers);
     }
 
-    // GET /api/suppliers/{id}
-    [HttpGet("{id:guid}")]
-    public IActionResult GetById(
-        [FromRoute] Guid id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
     {
-        Supplier? supplier =
-            _supplierService.GetById(id);
+        var supplier =
+            await _supplierService.GetByIdAsync(id);
 
         if (supplier == null)
         {
@@ -45,48 +42,43 @@ public class SuppliersController : ControllerBase
         return Ok(supplier);
     }
 
-    // POST /api/suppliers
     [HttpPost]
-    public IActionResult Create(
-        [FromBody] CreateSupplierRequest request)
+    public async Task<IActionResult> Create(
+        CreateSupplierRequest request)
     {
-        var result =
-            _supplierService.Create(request);
-
-        if (!result.Success)
+        try
         {
-            return BadRequest(new
+            var supplier =
+                await _supplierService.CreateAsync(request);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = supplier.SupplierId },
+                supplier);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
             {
-                message = result.Error
+                message = ex.Message
             });
         }
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = result.Supplier!.Id },
-            result.Supplier);
     }
 
-    // DELETE /api/suppliers/{id}
-    [HttpDelete("{id:guid}")]
-    public IActionResult Deactivate(
-        [FromRoute] Guid id)
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Deactivate(int id)
     {
         var result =
-            _supplierService.Deactivate(id);
+            await _supplierService.DeactivateAsync(id);
 
-        if (!result.Success)
+        if (!result)
         {
             return NotFound(new
             {
-                message = result.Error
+                message = "Supplier not found."
             });
         }
 
-        return Ok(new
-        {
-            message = "Supplier deactivated successfully.",
-            supplier = result.Supplier
-        });
+        return NoContent();
     }
 }

@@ -5,26 +5,29 @@ namespace WarehouseManagement.Api.Services;
 
 public interface IProductService
 {
-    List<Product> GetAll(bool onlyAvailable);
+    Task<List<Product>> GetAllAsync(bool onlyAvailable = false);
 
-    Product? GetById(Guid id);
+    Task<Product?> GetByIdAsync(int id);
 
-    List<Product> Search(string? name, string? supplier);
+    Task<List<Product>> SearchAsync(
+        string? name,
+        string? supplier);
 
-    (bool Success, string? Error, Product? Product) Create(
+    Task<Product> CreateAsync(
         CreateProductRequest request);
 
-    (bool Success, string? Error, Product? Product) UpdateQuantity(
-        Guid id,
-        int quantity);
-
-    (bool Success, string? Error, Product? Product) UpdatePrice(
-        Guid id,
+    Task<(bool Success, string? Error, Product? Product)> UpdatePriceAsync(
+        int id,
         decimal price);
 
-    (bool Success, string? Error, Product? Product) Archive(Guid id);
+    Task<(bool Success, string? Error, Product? Product)> UpdateQuantityAsync(
+        int id,
+        int quantity);
 
-    (bool Success, string? Error, Product? Product) AssignSupplier(
-        Guid productId,
-        Guid supplierId);
+    Task<(bool Success, string? Error, Product? Product)> ArchiveAsync(
+        int id);
+
+    Task<(bool Success, string? Error, Product? Product)> AssignSupplierAsync(
+        int id,
+        int supplierId);
 }

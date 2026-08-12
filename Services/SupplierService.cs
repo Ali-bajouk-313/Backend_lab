@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using WarehouseManagement.Api.Contracts;
 using WarehouseManagement.Api.Data;
 using WarehouseManagement.Api.Models;
@@ -6,38 +7,43 @@ namespace WarehouseManagement.Api.Services;
 
 public class SupplierService : ISupplierService
 {
-    public List<Supplier> GetAll()
+    private readonly WarehouseDBContext _context;
+
+    public SupplierService(WarehouseDBContext context)
     {
-        return FakeWarehouseStore.Suppliers;
+        _context = context;
     }
 
-    public Supplier? GetById(Guid id)
+    public async Task<List<Supplier>> GetAllAsync()
     {
-        return FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.Id == id);
+        return await _context.Suppliers
+            .Include(s => s.Products)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
     }
 
-    public (bool Success, string? Error, Supplier? Supplier) Create(
+    public async Task<Supplier?> GetByIdAsync(int id)
+    {
+        return await _context.Suppliers
+            .Include(s => s.Products)
+            .FirstOrDefaultAsync(s => s.SupplierId == id);
+    }
+
+    public async Task<Supplier> CreateAsync(
         CreateSupplierRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
-        {
-            return (false, "Supplier name is required.", null);
-        }
-
-        bool exists = FakeWarehouseStore.Suppliers.Any(s =>
-            s.Name.Equals(
-                request.Name,
-                StringComparison.OrdinalIgnoreCase));
+        bool exists = await _context.Suppliers
+            .AnyAsync(s =>
+                s.Name.ToLower() == request.Name.ToLower());
 
         if (exists)
         {
-            return (false, "Supplier already exists.", null);
+            throw new InvalidOperationException(
+                "Supplier already exists.");
         }
 
-        Supplier supplier = new Supplier
+        var supplier = new Supplier
         {
-            Id = Guid.NewGuid(),
             Name = request.Name,
             Country = request.Country,
             ContactEmail = request.ContactEmail,
@@ -45,28 +51,27 @@ public class SupplierService : ISupplierService
             IsActive = true
         };
 
-        FakeWarehouseStore.Suppliers.Add(supplier);
+        _context.Suppliers.Add(supplier);
 
-        return (true, null, supplier);
+        await _context.SaveChangesAsync();
+
+        return supplier;
     }
 
-    public (bool Success, string? Error, Supplier? Supplier) Deactivate(
-        Guid id)
+    public async Task<bool> DeactivateAsync(int id)
     {
-        Supplier? supplier = GetById(id);
+        var supplier = await _context.Suppliers
+            .FirstOrDefaultAsync(s => s.SupplierId == id);
 
         if (supplier == null)
         {
-            return (false, "Supplier not found.", null);
-        }
-
-        if (!supplier.IsActive)
-        {
-            return (false, "Supplier is already inactive.", null);
+            return false;
         }
 
         supplier.IsActive = false;
 
-        return (true, null, supplier);
+        await _context.SaveChangesAsync();
+
+        return true;
     }
 }

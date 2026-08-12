@@ -5,13 +5,12 @@ namespace WarehouseManagement.Api.Services;
 
 public interface ISupplierService
 {
-    List<Supplier> GetAll();
+    Task<List<Supplier>> GetAllAsync();
 
-    Supplier? GetById(Guid id);
+    Task<Supplier?> GetByIdAsync(int id);
 
-    (bool Success, string? Error, Supplier? Supplier) Create(
+    Task<Supplier> CreateAsync(
         CreateSupplierRequest request);
 
-    (bool Success, string? Error, Supplier? Supplier) Deactivate(
-        Guid id);
+    Task<bool> DeactivateAsync(int id);
 }

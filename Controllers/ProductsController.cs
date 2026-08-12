@@ -3,6 +3,7 @@ using System.Globalization;
 using WarehouseManagement.Api.Contracts;
 using WarehouseManagement.Api.Models;
 using WarehouseManagement.Api.Services;
+using AutoMapper;
 
 namespace WarehouseManagement.Api.Controllers;
 
@@ -11,34 +12,34 @@ namespace WarehouseManagement.Api.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
-    private readonly ISupplierService _supplierService;
     private readonly IWebHostEnvironment _environment;
 
     public ProductsController(
+        IMapper mapper,
         IProductService productService,
-        ISupplierService supplierService,
         IWebHostEnvironment environment)
     {
         _productService = productService;
-        _supplierService = supplierService;
         _environment = environment;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    public IActionResult GetAll(
+    public async Task<IActionResult> GetAll(
         [FromQuery] bool onlyAvailable = false)
     {
-        List<Product> products =
-            _productService.GetAll(onlyAvailable);
+        var products =
+            await _productService.GetAllAsync(onlyAvailable);
 
         return Ok(products);
     }
 
-    [HttpGet("{id:guid}")]
-    public IActionResult GetById(
-        [FromRoute] Guid id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(
+        [FromRoute] int id)
     {
-        Product? product = _productService.GetById(id);
+        var product =
+            await _productService.GetByIdAsync(id);
 
         if (product == null)
         {
@@ -52,7 +53,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet("search")]
-    public IActionResult Search(
+    public async Task<IActionResult> Search(
         [FromQuery] string? name,
         [FromQuery] string? supplier)
     {
@@ -65,42 +66,44 @@ public class ProductsController : ControllerBase
             });
         }
 
-        List<Product> products =
-            _productService.Search(name, supplier);
+        var products =
+            await _productService.SearchAsync(name, supplier);
 
         return Ok(products);
     }
 
-    // POST /api/products
     [HttpPost]
-    public IActionResult Create(
+    public async Task<IActionResult> Create(
         [FromBody] CreateProductRequest request)
     {
-        var result = _productService.Create(request);
-
-        if (!result.Success)
+        try
         {
-            return BadRequest(new
+            var product =
+                await _productService.CreateAsync(request);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = product.Id },
+                product);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
             {
-                message = result.Error
+                message = ex.Message
             });
         }
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = result.Product!.Id },
-            result.Product);
     }
 
-    // POST /api/products/{id}/quantity
-    [HttpPost("{id:guid}/quantity")]
-    public IActionResult UpdateQuantity(
-        [FromRoute] Guid id,
+    [HttpPost("{id:int}/quantity")]
+    public async Task<IActionResult> UpdateQuantity(
+        [FromRoute] int id,
         [FromBody] UpdateProductQuantityRequest request)
     {
-        var result = _productService.UpdateQuantity(
-            id,
-            request.QuantityInStock);
+        var result =
+            await _productService.UpdateQuantityAsync(
+                id,
+                request.QuantityInStock);
 
         if (!result.Success)
         {
@@ -121,15 +124,15 @@ public class ProductsController : ControllerBase
         return Ok(result.Product);
     }
 
-    // POST /api/products/{id}/price
-    [HttpPost("{id:guid}/price")]
-    public IActionResult UpdatePrice(
-        [FromRoute] Guid id,
+    [HttpPost("{id:int}/price")]
+    public async Task<IActionResult> UpdatePrice(
+        [FromRoute] int id,
         [FromBody] UpdateProductPriceRequest request)
     {
-        var result = _productService.UpdatePrice(
-            id,
-            request.Price);
+        var result =
+            await _productService.UpdatePriceAsync(
+                id,
+                request.Price);
 
         if (!result.Success)
         {
@@ -150,13 +153,13 @@ public class ProductsController : ControllerBase
         return Ok(result.Product);
     }
 
-    // POST /api/products/{id}/image
-    [HttpPost("{id:guid}/image")]
+    [HttpPost("{id:int}/image")]
     public async Task<IActionResult> UploadImage(
-        [FromRoute] Guid id,
+        [FromRoute] int id,
         [FromForm] IFormFile file)
     {
-        Product? product = _productService.GetById(id);
+        var product =
+            await _productService.GetByIdAsync(id);
 
         if (product == null)
         {
@@ -183,7 +186,8 @@ public class ProductsController : ControllerBase
         }
 
         string extension =
-            Path.GetExtension(file.FileName).ToLowerInvariant();
+            Path.GetExtension(file.FileName)
+                .ToLowerInvariant();
 
         string[] allowedExtensions =
         {
@@ -212,7 +216,7 @@ public class ProductsController : ControllerBase
         string filePath =
             Path.Combine(uploadsFolder, fileName);
 
-        using FileStream stream =
+        await using FileStream stream =
             new FileStream(
                 filePath,
                 FileMode.Create);
@@ -232,12 +236,12 @@ public class ProductsController : ControllerBase
         return Ok(image);
     }
 
-    // DELETE /api/products/{id}
-    [HttpDelete("{id:guid}")]
-    public IActionResult Delete(
-        [FromRoute] Guid id)
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(
+        [FromRoute] int id)
     {
-        var result = _productService.Archive(id);
+        var result =
+            await _productService.ArchiveAsync(id);
 
         if (!result.Success)
         {
@@ -254,26 +258,24 @@ public class ProductsController : ControllerBase
         });
     }
 
-    // GET /api/products/server-time
     [HttpGet("server-time")]
     public IActionResult GetServerTime(
         [FromHeader(Name = "Accept-Language")]
         string? language)
     {
-        string cultureName = language?.ToLowerInvariant() switch
-        {
-            "fr-fr" => "fr-FR",
-            "ar-lb" => "ar-LB",
-            _ => "en-US"
-        };
+        string cultureName =
+            language?.ToLowerInvariant() switch
+            {
+                "fr-fr" => "fr-FR",
+                "ar-lb" => "ar-LB",
+                _ => "en-US"
+            };
 
         CultureInfo culture =
             CultureInfo.GetCultureInfo(cultureName);
 
         string formattedDate =
-            DateTime.Now.ToString(
-                "F",
-                culture);
+            DateTime.Now.ToString("F", culture);
 
         return Ok(new
         {
@@ -282,27 +284,20 @@ public class ProductsController : ControllerBase
         });
     }
 
-    // POST /api/products/{id}/assign-supplier/{supplierId}
-    [HttpPost("{id:guid}/assign-supplier/{supplierId:guid}")]
-    public IActionResult AssignSupplier(
-        [FromRoute] Guid id,
-        [FromRoute] Guid supplierId)
+    [HttpPost("{id:int}/assign-supplier/{supplierId:int}")]
+    public async Task<IActionResult> AssignSupplier(
+        [FromRoute] int id,
+        [FromRoute] int supplierId)
     {
-        var result = _productService.AssignSupplier(
-            id,
-            supplierId);
+        var result =
+            await _productService.AssignSupplierAsync(
+                id,
+                supplierId);
 
         if (!result.Success)
         {
-            if (result.Error == "Product not found.")
-            {
-                return NotFound(new
-                {
-                    message = result.Error
-                });
-            }
-
-            if (result.Error == "Supplier not found.")
+            if (result.Error == "Product not found." ||
+                result.Error == "Supplier not found.")
             {
                 return NotFound(new
                 {

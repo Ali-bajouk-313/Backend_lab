@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using WarehouseManagement.Api.Contracts;
 using WarehouseManagement.Api.Data;
 using WarehouseManagement.Api.Models;
@@ -6,89 +7,81 @@ namespace WarehouseManagement.Api.Services;
 
 public class ProductService : IProductService
 {
-    public List<Product> GetAll(bool onlyAvailable)
+    private readonly WarehouseDBContext _context;
+
+    public ProductService(WarehouseDBContext context)
     {
-        IEnumerable<Product> products = FakeWarehouseStore.Products
+        _context = context;
+    }
+
+    public async Task<List<Product>> GetAllAsync(
+        bool onlyAvailable = false)
+    {
+        var query = _context.Products
+            .Include(p => p.Supplier)
+            .Include(p => p.Images)
             .Where(p => !p.IsArchived);
 
         if (onlyAvailable)
         {
-            products = products.Where(p => p.QuantityInStock > 0);
+            query = query.Where(p => p.QuantityInStock > 0);
         }
 
-        return products
+        return await query
             .OrderByDescending(p => p.CreatedAt)
-            .ToList();
+            .ToListAsync();
     }
 
-    public Product? GetById(Guid id)
+    public async Task<Product?> GetByIdAsync(int id)
     {
-        return FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id && !p.IsArchived);
+        return await _context.Products
+            .Include(p => p.Supplier)
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == id);
     }
 
-    public List<Product> Search(string? name, string? supplier)
+    public async Task<List<Product>> SearchAsync(
+        string? name,
+        string? supplier)
     {
-        IEnumerable<Product> products = FakeWarehouseStore.Products
-            .Where(p => !p.IsArchived);
+        var query = _context.Products
+            .Include(p => p.Supplier)
+            .Include(p => p.Images)
+            .Where(p => !p.IsArchived)
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(name))
         {
-            products = products.Where(p =>
-                p.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(p =>
+                p.Name.Contains(name));
         }
 
         if (!string.IsNullOrWhiteSpace(supplier))
         {
-            products = products.Where(p =>
-                p.SupplierName.Contains(
-                    supplier,
-                    StringComparison.OrdinalIgnoreCase));
+            query = query.Where(p =>
+                p.Supplier != null &&
+                p.Supplier.Name.Contains(supplier));
         }
 
-        return products
-            .OrderByDescending(p => p.CreatedAt)
-            .ToList();
+        return await query
+            .OrderBy(p => p.Name)
+            .ToListAsync();
     }
 
-    public (bool Success, string? Error, Product? Product) Create(
+    public async Task<Product> CreateAsync(
         CreateProductRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
+        bool skuExists = await _context.Products
+            .AnyAsync(p => p.SKU == request.SKU);
+
+        if (skuExists)
         {
-            return (false, "Product name is required.", null);
+            throw new InvalidOperationException(
+                "SKU already exists.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.SKU))
+        var product = new Product
         {
-            return (false, "SKU is required.", null);
-        }
-
-        if (request.Price <= 0)
-        {
-            return (false, "Price must be greater than 0.", null);
-        }
-
-        if (request.QuantityInStock < 0)
-        {
-            return (false, "Quantity cannot be negative.", null);
-        }
-
-        bool duplicateSku = FakeWarehouseStore.Products
-            .Any(p => p.SKU.Equals(
-                request.SKU,
-                StringComparison.OrdinalIgnoreCase));
-
-        if (duplicateSku)
-        {
-            return (false, "A product with this SKU already exists.", null);
-        }
-
-        DateTime now = DateTime.UtcNow;
-
-        Product product = new Product
-        {
-            Id = Guid.NewGuid(),
             Name = request.Name,
             SKU = request.SKU,
             Description = request.Description,
@@ -97,104 +90,97 @@ public class ProductService : IProductService
             SupplierName = request.SupplierName,
             ExpiryDate = request.ExpiryDate,
             IsArchived = false,
-            CreatedAt = now,
-            LastUpdatedAt = now
+            CreatedAt = DateTime.UtcNow,
+            LastUpdatedAt = DateTime.UtcNow
         };
 
-        FakeWarehouseStore.Products.Add(product);
+        _context.Products.Add(product);
 
-        return (true, null, product);
+        await _context.SaveChangesAsync();
+
+        return product;
     }
 
-    public (bool Success, string? Error, Product? Product) UpdateQuantity(
-        Guid id,
-        int quantity)
+    public async Task<(bool Success, string? Error, Product? Product)>
+        UpdatePriceAsync(int id, decimal price)
     {
-        Product? product = GetById(id);
+        if (price <= 0)
+        {
+            return (false, "Price must be greater than zero.", null);
+        }
+
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         if (product == null)
         {
             return (false, "Product not found.", null);
         }
 
+        product.Price = price;
+        product.LastUpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return (true, null, product);
+    }
+
+    public async Task<(bool Success, string? Error, Product? Product)>
+        UpdateQuantityAsync(int id, int quantity)
+    {
         if (quantity < 0)
         {
             return (false, "Quantity cannot be negative.", null);
         }
 
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
+        {
+            return (false, "Product not found.", null);
+        }
+
         product.QuantityInStock = quantity;
         product.LastUpdatedAt = DateTime.UtcNow;
 
-        return (true, null, product);
-    }
-
-    public (bool Success, string? Error, Product? Product) UpdatePrice(
-        Guid id,
-        decimal price)
-    {
-        Product? product = GetById(id);
-
-        if (product == null)
-        {
-            return (false, "Product not found.", null);
-        }
-
-        if (price <= 0)
-        {
-            return (false, "Price must be greater than 0.", null);
-        }
-
-        decimal oldPrice = product.Price;
-
-        product.Price = price;
-        product.LastUpdatedAt = DateTime.UtcNow;
-
-        Console.WriteLine(
-            $"Product {product.Id} price changed from {oldPrice} to {price}");
+        await _context.SaveChangesAsync();
 
         return (true, null, product);
     }
 
-    public (bool Success, string? Error, Product? Product) Archive(Guid id)
+    public async Task<(bool Success, string? Error, Product? Product)>
+        ArchiveAsync(int id)
     {
-        Product? product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == id);
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         if (product == null)
         {
             return (false, "Product not found.", null);
-        }
-
-        if (product.IsArchived)
-        {
-            return (false, "Product is already archived.", null);
         }
 
         product.IsArchived = true;
         product.LastUpdatedAt = DateTime.UtcNow;
 
+        await _context.SaveChangesAsync();
+
         return (true, null, product);
     }
 
-    public (bool Success, string? Error, Product? Product) AssignSupplier(
-        Guid productId,
-        Guid supplierId)
+    public async Task<(bool Success, string? Error, Product? Product)>
+        AssignSupplierAsync(int id, int supplierId)
     {
-        Product? product = FakeWarehouseStore.Products
-            .FirstOrDefault(p => p.Id == productId);
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         if (product == null)
         {
             return (false, "Product not found.", null);
         }
 
-        if (product.IsArchived)
-        {
-            return (false, "Archived products cannot be assigned a supplier.", null);
-        }
-
-        Supplier? supplier = FakeWarehouseStore.Suppliers
-            .FirstOrDefault(s => s.Id == supplierId);
+        var supplier = await _context.Suppliers
+            .FirstOrDefaultAsync(s => s.SupplierId == supplierId);
 
         if (supplier == null)
         {
@@ -206,9 +192,11 @@ public class ProductService : IProductService
             return (false, "Supplier is not active.", null);
         }
 
-        product.SupplierId = supplier.Id;
+        product.SupplierId = supplierId;
         product.SupplierName = supplier.Name;
         product.LastUpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
 
         return (true, null, product);
     }

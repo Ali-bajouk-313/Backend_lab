@@ -2,7 +2,7 @@ namespace WarehouseManagement.Api.Models;
 
 public class Supplier
 {
-    public Guid Id { get; set; }
+    public int SupplierId { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -13,4 +13,7 @@ public class Supplier
     public string PhoneNumber { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }
+
+    public ICollection<Product> Products { get; set; }
+        = new List<Product>();
 }
