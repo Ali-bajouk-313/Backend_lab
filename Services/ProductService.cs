@@ -21,7 +21,7 @@ public class ProductService : IProductService
             .ToList();
     }
 
-    public Product? GetById(Guid id)
+    public Product? GetById(int id)
     {
         return FakeWarehouseStore.Products
             .FirstOrDefault(p => p.Id == id && !p.IsArchived);
@@ -38,13 +38,7 @@ public class ProductService : IProductService
                 p.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (!string.IsNullOrWhiteSpace(supplier))
-        {
-            products = products.Where(p =>
-                p.SupplierName.Contains(
-                    supplier,
-                    StringComparison.OrdinalIgnoreCase));
-        }
+       
 
         return products
             .OrderByDescending(p => p.CreatedAt)
@@ -88,13 +82,12 @@ public class ProductService : IProductService
 
         Product product = new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = request.Name,
             SKU = request.SKU,
             Description = request.Description,
             Price = request.Price,
             QuantityInStock = request.QuantityInStock,
-            SupplierName = request.SupplierName,
             ExpiryDate = request.ExpiryDate,
             IsArchived = false,
             CreatedAt = now,
@@ -107,7 +100,7 @@ public class ProductService : IProductService
     }
 
     public (bool Success, string? Error, Product? Product) UpdateQuantity(
-        Guid id,
+        int id,
         int quantity)
     {
         Product? product = GetById(id);
@@ -129,7 +122,7 @@ public class ProductService : IProductService
     }
 
     public (bool Success, string? Error, Product? Product) UpdatePrice(
-        Guid id,
+        int id,
         decimal price)
     {
         Product? product = GetById(id);
@@ -155,7 +148,7 @@ public class ProductService : IProductService
         return (true, null, product);
     }
 
-    public (bool Success, string? Error, Product? Product) Archive(Guid id)
+    public (bool Success, string? Error, Product? Product) Archive(int id)
     {
         Product? product = FakeWarehouseStore.Products
             .FirstOrDefault(p => p.Id == id);
@@ -177,8 +170,8 @@ public class ProductService : IProductService
     }
 
     public (bool Success, string? Error, Product? Product) AssignSupplier(
-        Guid productId,
-        Guid supplierId)
+        int productId,
+        int supplierId)
     {
         Product? product = FakeWarehouseStore.Products
             .FirstOrDefault(p => p.Id == productId);
@@ -207,7 +200,6 @@ public class ProductService : IProductService
         }
 
         product.SupplierId = supplier.Id;
-        product.SupplierName = supplier.Name;
         product.LastUpdatedAt = DateTime.UtcNow;
 
         return (true, null, product);

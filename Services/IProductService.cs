@@ -7,7 +7,7 @@ public interface IProductService
 {
     List<Product> GetAll(bool onlyAvailable);
 
-    Product? GetById(Guid id);
+    Product? GetById(int id);
 
     List<Product> Search(string? name, string? supplier);
 
@@ -15,16 +15,16 @@ public interface IProductService
         CreateProductRequest request);
 
     (bool Success, string? Error, Product? Product) UpdateQuantity(
-        Guid id,
+        int id,
         int quantity);
 
     (bool Success, string? Error, Product? Product) UpdatePrice(
-        Guid id,
+        int id,
         decimal price);
 
-    (bool Success, string? Error, Product? Product) Archive(Guid id);
+    (bool Success, string? Error, Product? Product) Archive(int id);
 
     (bool Success, string? Error, Product? Product) AssignSupplier(
-        Guid productId,
-        Guid supplierId);
+        int productId,
+        int supplierId);
 }

@@ -12,7 +12,5 @@ public class CreateProductRequest
 
     public int QuantityInStock { get; set; }
 
-    public string SupplierName { get; set; } = string.Empty;
-
     public DateTime? ExpiryDate { get; set; }
 }

@@ -2,7 +2,7 @@ namespace WarehouseManagement.Api.Models;
 
 public class Product
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -14,9 +14,7 @@ public class Product
 
     public int QuantityInStock { get; set; }
 
-    public string SupplierName { get; set; } = string.Empty;
-
-    public Guid? SupplierId { get; set; }
+    public int? SupplierId { get; set; }
 
     public DateTime? ExpiryDate { get; set; }
 

@@ -8,13 +8,12 @@ public static class FakeWarehouseStore
     {
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Dell Laptop",
             SKU = "LAP-001",
             Description = "Business laptop",
             Price = 899.99m,
             QuantityInStock = 15,
-            SupplierName = "Dell Supplier",
             ExpiryDate = null,
             IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-10),
@@ -23,41 +22,39 @@ public static class FakeWarehouseStore
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Wireless Mouse",
             SKU = "MOU-001",
             Description = "Wireless optical mouse",
             Price = 29.99m,
             QuantityInStock = 50,
-            SupplierName = "Tech Supplier",
-            IsArchived = false,
+                      IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-9),
             LastUpdatedAt = DateTime.UtcNow.AddDays(-1)
         },
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Mechanical Keyboard",
             SKU = "KEY-001",
             Description = "RGB mechanical keyboard",
             Price = 79.99m,
             QuantityInStock = 30,
-            SupplierName = "Tech Supplier",
-            IsArchived = false,
+                      IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-8),
             LastUpdatedAt = DateTime.UtcNow
         },
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Barcode Scanner",
             SKU = "SCN-001",
             Description = "Warehouse barcode scanner",
             Price = 149.99m,
             QuantityInStock = 12,
-            SupplierName = "Scanner Supplier",
+            
             IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-7),
             LastUpdatedAt = DateTime.UtcNow
@@ -65,13 +62,13 @@ public static class FakeWarehouseStore
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Laser Printer",
             SKU = "PRN-001",
             Description = "Office laser printer",
             Price = 299.99m,
             QuantityInStock = 8,
-            SupplierName = "Printer Supplier",
+            
             IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-6),
             LastUpdatedAt = DateTime.UtcNow
@@ -79,41 +76,39 @@ public static class FakeWarehouseStore
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Dell Monitor",
             SKU = "MON-001",
             Description = "24 inch Full HD monitor",
             Price = 199.99m,
             QuantityInStock = 20,
-            SupplierName = "Dell Supplier",
-            IsArchived = false,
+                      IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-5),
             LastUpdatedAt = DateTime.UtcNow
         },
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "USB-C Hub",
             SKU = "HUB-001",
             Description = "Multi-port USB-C hub",
             Price = 49.99m,
             QuantityInStock = 0,
-            SupplierName = "Tech Supplier",
-            IsArchived = false,
+                      IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-4),
             LastUpdatedAt = DateTime.UtcNow
         },
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Network Switch",
             SKU = "NET-001",
             Description = "24 port network switch",
             Price = 249.99m,
             QuantityInStock = 10,
-            SupplierName = "Network Supplier",
+            
             IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-3),
             LastUpdatedAt = DateTime.UtcNow
@@ -121,27 +116,26 @@ public static class FakeWarehouseStore
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Webcam",
             SKU = "CAM-001",
             Description = "Full HD webcam",
             Price = 69.99m,
             QuantityInStock = 25,
-            SupplierName = "Camera Supplier",
-            IsArchived = false,
+                        IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-2),
             LastUpdatedAt = DateTime.UtcNow
         },
 
         new Product
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "External SSD",
             SKU = "SSD-001",
             Description = "1TB external SSD",
             Price = 119.99m,
             QuantityInStock = 18,
-            SupplierName = "Storage Supplier",
+            
             IsArchived = false,
             CreatedAt = DateTime.UtcNow.AddDays(-1),
             LastUpdatedAt = DateTime.UtcNow
@@ -152,7 +146,7 @@ public static class FakeWarehouseStore
     {
         new Supplier
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Dell Supplier",
             Country = "USA",
             ContactEmail = "contact@dellsupplier.com",
@@ -162,7 +156,7 @@ public static class FakeWarehouseStore
 
         new Supplier
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Tech Supplier",
             Country = "China",
             ContactEmail = "contact@techsupplier.com",
@@ -172,7 +166,7 @@ public static class FakeWarehouseStore
 
         new Supplier
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = "Network Supplier",
             Country = "Germany",
             ContactEmail = "contact@networksupplier.com",

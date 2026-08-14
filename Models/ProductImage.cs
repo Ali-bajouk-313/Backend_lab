@@ -2,7 +2,9 @@ namespace WarehouseManagement.Api.Models;
 
 public class ProductImage
 {
-    public Guid ProductId { get; set; }
+    public int Id { get; set; }
+
+    public int ProductId { get; set; }
 
     public string FileName { get; set; } = string.Empty;
 

@@ -11,7 +11,7 @@ public class SupplierService : ISupplierService
         return FakeWarehouseStore.Suppliers;
     }
 
-    public Supplier? GetById(Guid id)
+    public Supplier? GetById(int id)
     {
         return FakeWarehouseStore.Suppliers
             .FirstOrDefault(s => s.Id == id);
@@ -37,7 +37,7 @@ public class SupplierService : ISupplierService
 
         Supplier supplier = new Supplier
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.Next(1, 1000),
             Name = request.Name,
             Country = request.Country,
             ContactEmail = request.ContactEmail,
@@ -51,7 +51,7 @@ public class SupplierService : ISupplierService
     }
 
     public (bool Success, string? Error, Supplier? Supplier) Deactivate(
-        Guid id)
+        int id)
     {
         Supplier? supplier = GetById(id);
 
